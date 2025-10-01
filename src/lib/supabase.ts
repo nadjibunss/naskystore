@@ -52,3 +52,16 @@ export interface Deposit {
   status: string;
   created_at: string;
 }
+
+export interface PromoCode {
+  id: string;
+  code: string;
+  discount_type: 'percentage' | 'fixed';
+  discount_value: number;
+  is_active: boolean;
+  min_purchase: number;
+  max_usage: number | null;
+  current_usage: number;
+  valid_until: string | null;
+  created_at: string;
+}

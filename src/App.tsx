@@ -10,6 +10,7 @@ import ProductGrid from './components/ProductGrid';
 import LoginModal from './components/LoginModal';
 import EditProfileModal from './components/EditProfileModal';
 import ProductModal from './components/ProductModal';
+import ProductDetail from './components/ProductDetail';
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -22,6 +23,7 @@ function App() {
   const [editProfileModalOpen, setEditProfileModalOpen] = useState(false);
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [showProductDetail, setShowProductDetail] = useState(false);
 
   useEffect(() => {
     checkUser();
@@ -184,14 +186,16 @@ function App() {
     await fetchUserProfile(user.id);
   };
 
-  const handlePurchase = async (product: Product) => {
+  const handlePurchase = async (product: Product, useBalance: boolean, promoCode?: string, finalPrice?: number) => {
     if (!user) {
       alert('Silakan login terlebih dahulu');
       setLoginModalOpen(true);
       return;
     }
 
-    if (user.balance < product.price) {
+    const purchasePrice = finalPrice || product.price;
+
+    if (useBalance && user.balance < purchasePrice) {
       alert('Saldo tidak cukup! Silakan deposit terlebih dahulu.');
       return;
     }
@@ -201,18 +205,21 @@ function App() {
       return;
     }
 
-    const newBalance = user.balance - product.price;
-    const newStock = product.stock - 1;
+    if (useBalance) {
+      const newBalance = user.balance - purchasePrice;
 
-    const { error: balanceError } = await supabase
-      .from('profiles')
-      .update({ balance: newBalance })
-      .eq('id', user.id);
+      const { error: balanceError } = await supabase
+        .from('profiles')
+        .update({ balance: newBalance })
+        .eq('id', user.id);
 
-    if (balanceError) {
-      alert('Terjadi kesalahan saat memproses pembayaran');
-      return;
+      if (balanceError) {
+        alert('Terjadi kesalahan saat memproses pembayaran');
+        return;
+      }
     }
+
+    const newStock = product.stock - 1;
 
     const { error: stockError } = await supabase
       .from('products')
@@ -229,7 +236,7 @@ function App() {
       .insert({
         user_id: user.id,
         product_id: product.id,
-        amount: product.price,
+        amount: purchasePrice,
         status: 'completed',
       });
 
@@ -238,9 +245,14 @@ function App() {
       return;
     }
 
-    alert('Pembelian berhasil!');
+    if (promoCode) {
+      await supabase.rpc('increment_promo_usage', { promo_code: promoCode });
+    }
+
+    alert(useBalance ? 'Pembelian berhasil!' : 'Pesanan dibuat! Silakan selesaikan pembayaran QRIS.');
     await fetchUserProfile(user.id);
     await fetchProducts();
+    setShowProductDetail(false);
   };
 
   const handleDeposit = () => {
@@ -273,8 +285,19 @@ function App() {
 
   const handleProductClick = (product: Product) => {
     setSelectedProduct(product);
-    setProductModalOpen(true);
+    setShowProductDetail(true);
   };
+
+  if (showProductDetail && selectedProduct) {
+    return (
+      <ProductDetail
+        product={selectedProduct}
+        profile={user}
+        onBack={() => setShowProductDetail(false)}
+        onPurchase={handlePurchase}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
