@@ -14,6 +14,8 @@ import ProductDetail from './components/ProductDetail';
 import DepositPage from './components/DepositPage';
 import ComingSoonPage from './components/ComingSoonPage';
 import TopSpentPage from './components/TopSpentPage';
+import OrderHistoryPage from './components/OrderHistoryPage';
+import DepositHistoryPage from './components/DepositHistoryPage';
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -71,6 +73,23 @@ function App() {
 
     if (data) {
       setUser(data);
+    } else if (!data) {
+      const { data: authUser } = await supabase.auth.getUser();
+      if (authUser.user) {
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert({
+            id: authUser.user.id,
+            email: authUser.user.email || '',
+            name: authUser.user.user_metadata?.full_name || authUser.user.email?.split('@')[0] || 'User',
+            balance: 0,
+            is_admin: false,
+          });
+
+        if (!insertError) {
+          await fetchUserProfile(userId);
+        }
+      }
     }
   };
 
@@ -145,6 +164,17 @@ function App() {
 
       await fetchUserProfile(data.user.id);
     }
+  };
+
+  const handleGoogleLogin = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+
+    if (error) throw error;
   };
 
   const handleLogout = async () => {
@@ -310,7 +340,29 @@ function App() {
     );
   }
 
+  if (currentSection === 'orders' && user) {
+    return (
+      <OrderHistoryPage
+        userId={user.id}
+        onBack={() => setCurrentSection('home')}
+      />
+    );
+  }
+
+  if (currentSection === 'deposit-history' && user) {
+    return (
+      <DepositHistoryPage
+        userId={user.id}
+        onBack={() => setCurrentSection('home')}
+      />
+    );
+  }
+
   if (currentSection === 'guide') {
+    return <ComingSoonPage onBack={() => setCurrentSection('home')} />;
+  }
+
+  if (currentSection === 'support') {
     return <ComingSoonPage onBack={() => setCurrentSection('home')} />;
   }
 
@@ -386,6 +438,7 @@ function App() {
         onClose={() => setLoginModalOpen(false)}
         onLogin={handleLogin}
         onSignup={handleSignup}
+        onGoogleLogin={handleGoogleLogin}
       />
 
       <EditProfileModal

@@ -42,6 +42,8 @@ export interface Order {
   product_id: string;
   amount: number;
   status: string;
+  product_details?: any;
+  qris_payment_id?: string;
   created_at: string;
 }
 
@@ -50,6 +52,7 @@ export interface Deposit {
   user_id: string;
   amount: number;
   status: string;
+  qris_payment_id?: string;
   created_at: string;
 }
 
@@ -64,4 +67,27 @@ export interface PromoCode {
   current_usage: number;
   valid_until: string | null;
   created_at: string;
+}
+
+export interface ProductInventory {
+  id: string;
+  product_id: string;
+  email: string;
+  password: string;
+  is_sold: boolean;
+  order_id: string | null;
+  created_at: string;
+}
+
+export interface QRISPayment {
+  id: string;
+  user_id: string;
+  qris_code: string;
+  qris_url: string;
+  amount: number;
+  type: 'deposit' | 'purchase';
+  reference_id: string | null;
+  status: 'pending' | 'completed' | 'expired' | 'failed';
+  created_at: string;
+  expires_at: string;
 }

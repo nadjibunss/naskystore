@@ -1,4 +1,4 @@
-import { Home, Wallet, History, MessageCircle, BookOpen, TrendingUp, X } from 'lucide-react';
+import { Home, Wallet, History, MessageCircle, BookOpen, TrendingUp, X, Receipt } from 'lucide-react';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -10,6 +10,7 @@ export default function Sidebar({ isOpen, onClose, onNavigate }: SidebarProps) {
   const menuItems = [
     { icon: Home, label: 'HOME', section: 'home' },
     { icon: Wallet, label: 'DEPOSIT', section: 'deposit' },
+    { icon: Receipt, label: 'HISTORY DEPOSIT', section: 'deposit-history' },
     { icon: History, label: 'RIWAYAT PESANAN', section: 'orders' },
     { icon: MessageCircle, label: 'SUPPORT', section: 'support' },
     { icon: BookOpen, label: 'CARA PENGGUNAAN', section: 'guide' },
