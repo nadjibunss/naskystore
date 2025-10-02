@@ -11,6 +11,9 @@ import LoginModal from './components/LoginModal';
 import EditProfileModal from './components/EditProfileModal';
 import ProductModal from './components/ProductModal';
 import ProductDetail from './components/ProductDetail';
+import DepositPage from './components/DepositPage';
+import ComingSoonPage from './components/ComingSoonPage';
+import TopSpentPage from './components/TopSpentPage';
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -255,38 +258,65 @@ function App() {
     setShowProductDetail(false);
   };
 
-  const handleDeposit = () => {
+  const handleDeposit = async (amount: number) => {
     if (!user) {
       alert('Silakan login terlebih dahulu');
       setLoginModalOpen(true);
       return;
     }
 
-    const amount = prompt('Masukkan jumlah deposit:');
-    if (!amount) return;
+    const newBalance = user.balance + amount;
 
-    const depositAmount = parseFloat(amount);
-    if (isNaN(depositAmount) || depositAmount <= 0) {
-      alert('Jumlah deposit tidak valid');
-      return;
+    const { error: depositError } = await supabase
+      .from('deposits')
+      .insert({
+        user_id: user.id,
+        amount: amount,
+        status: 'completed',
+      });
+
+    if (depositError) {
+      throw new Error('Gagal membuat deposit');
     }
 
-    const newBalance = user.balance + depositAmount;
-
-    supabase
+    const { error: balanceError } = await supabase
       .from('profiles')
       .update({ balance: newBalance })
-      .eq('id', user.id)
-      .then(() => {
-        alert(`Deposit berhasil! Saldo baru: Rp ${newBalance.toLocaleString('id-ID')}`);
-        fetchUserProfile(user.id);
-      });
+      .eq('id', user.id);
+
+    if (balanceError) {
+      throw new Error('Gagal memperbarui saldo');
+    }
+
+    await fetchUserProfile(user.id);
+  };
+
+  const handleNavigate = (section: string) => {
+    setCurrentSection(section);
   };
 
   const handleProductClick = (product: Product) => {
     setSelectedProduct(product);
     setShowProductDetail(true);
   };
+
+  if (currentSection === 'deposit') {
+    return (
+      <DepositPage
+        profile={user}
+        onBack={() => setCurrentSection('home')}
+        onDeposit={handleDeposit}
+      />
+    );
+  }
+
+  if (currentSection === 'guide') {
+    return <ComingSoonPage onBack={() => setCurrentSection('home')} />;
+  }
+
+  if (currentSection === 'topspent') {
+    return <TopSpentPage onBack={() => setCurrentSection('home')} />;
+  }
 
   if (showProductDetail && selectedProduct) {
     return (
@@ -304,7 +334,7 @@ function App() {
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        onNavigate={(section) => setCurrentSection(section)}
+        onNavigate={handleNavigate}
       />
 
       <div className="container mx-auto px-4 py-6">
@@ -336,7 +366,7 @@ function App() {
             <BalanceCard
               profile={user}
               orders={orders}
-              onDeposit={handleDeposit}
+              onDeposit={() => setCurrentSection('deposit')}
             />
           </div>
 
