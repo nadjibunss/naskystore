@@ -167,14 +167,25 @@ function App() {
   };
 
   const handleGoogleLogin = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: window.location.origin,
-      },
-    });
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
 
-    if (error) throw error;
+      if (error) {
+        if (error.message.includes('provider is not enabled')) {
+          throw new Error('Google Login belum dikonfigurasi. Silakan gunakan email/password untuk login.');
+        } else {
+          throw error;
+        }
+      }
+    } catch (err: any) {
+      console.error('Google login error:', err);
+      throw err;
+    }
   };
 
   const handleLogout = async () => {
