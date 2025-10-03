@@ -288,7 +288,7 @@ function App() {
     setShowProductDetail(false);
   };
 
-  const handleDeposit = async (amount: number) => {
+  const handleDeposit = async (amount: number, qrisPaymentId: string) => {
     if (!user) {
       alert('Silakan login terlebih dahulu');
       setLoginModalOpen(true);
@@ -303,6 +303,7 @@ function App() {
         user_id: user.id,
         amount: amount,
         status: 'completed',
+        qris_payment_id: qrisPaymentId,
       });
 
     if (depositError) {

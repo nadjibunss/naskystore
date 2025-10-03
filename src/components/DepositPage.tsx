@@ -1,17 +1,19 @@
 import { useState } from 'react';
 import { ArrowLeft, Wallet } from 'lucide-react';
-import { Profile } from '../lib/supabase';
+import { Profile, QRISPayment } from '../lib/supabase';
+import { generateQRISPayment, simulateQRISPayment } from '../lib/qris';
 
 interface DepositPageProps {
   profile: Profile | null;
   onBack: () => void;
-  onDeposit: (amount: number) => Promise<void>;
+  onDeposit: (amount: number, qrisPaymentId: string) => Promise<void>;
 }
 
 export default function DepositPage({ profile, onBack, onDeposit }: DepositPageProps) {
   const [amount, setAmount] = useState('');
   const [showQRIS, setShowQRIS] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [qrisPayment, setQrisPayment] = useState<QRISPayment | null>(null);
 
   const templateAmounts = [10000, 15000, 20000, 30000, 40000, 50000];
 
@@ -27,22 +29,37 @@ export default function DepositPage({ profile, onBack, onDeposit }: DepositPageP
       return;
     }
 
-    setLoading(true);
-    setShowQRIS(true);
+    if (!profile) {
+      alert('Silakan login terlebih dahulu');
+      return;
+    }
 
-    setTimeout(async () => {
-      try {
-        await onDeposit(depositAmount);
-        alert('Deposit berhasil!');
-        setAmount('');
-        setShowQRIS(false);
-        onBack();
-      } catch (error) {
-        alert('Terjadi kesalahan saat deposit');
-      } finally {
-        setLoading(false);
-      }
-    }, 2000);
+    setLoading(true);
+
+    try {
+      const qris = await generateQRISPayment(
+        profile.id,
+        depositAmount,
+        'deposit'
+      );
+
+      setQrisPayment(qris);
+      setShowQRIS(true);
+
+      await simulateQRISPayment(qris.id);
+
+      await onDeposit(depositAmount, qris.id);
+      alert('Deposit berhasil!');
+      setAmount('');
+      setShowQRIS(false);
+      setQrisPayment(null);
+      onBack();
+    } catch (error) {
+      alert('Terjadi kesalahan saat deposit');
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -146,6 +163,11 @@ export default function DepositPage({ profile, onBack, onDeposit }: DepositPageP
                     <div className="w-48 h-48 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
                       <div className="text-center text-white">
                         <p className="text-xs mb-2">QRIS CODE</p>
+                        {qrisPayment && (
+                          <p className="font-mono text-xs mb-2 px-2 break-all">
+                            {qrisPayment.qris_code}
+                          </p>
+                        )}
                         <p className="font-bold text-2xl mb-1">
                           Rp {parseFloat(amount).toLocaleString('id-ID')}
                         </p>
